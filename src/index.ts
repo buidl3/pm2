@@ -1,6 +1,10 @@
 import "colors";
 import * as glob from "glob";
 
+function encode(data) {
+  return Buffer.from(data, "utf8").toString("base64");
+}
+
 function decode(data) {
   return JSON.parse(Buffer.from(data, "base64").toString("utf8") || "{}");
 }
@@ -16,7 +20,7 @@ function env() {
   }
 
   return {
-    __BUIDL3_ENV: Buffer.from(JSON.stringify(vars), "utf8").toString("base64"),
+    __BUIDL3_ENV: encode(JSON.stringify(vars)),
   };
 }
 
