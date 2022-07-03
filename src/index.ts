@@ -25,7 +25,17 @@ function env() {
 }
 
 function getModules(path = "modules/*"): Array<string> {
-  return glob.sync(path);
+  const paths = glob.sync(path);
+
+  const modules: Array<string> = [];
+  for (const path of paths) {
+    const b3ignore = glob.sync(path + "/.b3ignore")[0];
+    if (!!b3ignore) continue;
+
+    modules.push(path);
+  }
+
+  return modules;
 }
 
 function appify(app) {
