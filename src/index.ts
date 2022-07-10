@@ -2,26 +2,11 @@ import "colors";
 import * as glob from "glob";
 
 function encode(data) {
-  return Buffer.from(data, "utf8").toString("base64");
+  return Buffer.from(data || "", "utf8").toString("base64");
 }
 
 function decode(data) {
-  return JSON.parse(Buffer.from(data, "base64").toString("utf8") || "{}");
-}
-
-function env() {
-  const vars: any = {};
-
-  const genv = require("dotenv").config({ path: ".env" });
-
-  for (const app of getModules()) {
-    const menv = require("dotenv").config({ path: app + "/.env" });
-    vars[app] = { ...(genv.parsed || {}), ...(menv.parsed || {}) };
-  }
-
-  return {
-    __BUIDL3_ENV: encode(JSON.stringify(vars)),
-  };
+  return JSON.parse(Buffer.from(data || "", "base64").toString("utf8") || "{}");
 }
 
 function getModules(path = "modules/*"): Array<string> {
@@ -38,9 +23,39 @@ function getModules(path = "modules/*"): Array<string> {
   return modules;
 }
 
+function env() {
+  const vars: any = {};
+
+  // Global variables
+  const genv = require("dotenv").config({ path: ".env" });
+
+  // Network variables
+  const nenv = require("dotenv").config({ path: "networks/.env" });
+  vars["networks"] = nenv.parsed || {};
+
+  // Per-app variables
+  for (const $module of getModules()) {
+    const menv = require("dotenv").config({ path: $module + "/.env" });
+    vars["modules:" + $module] = {
+      ...(genv.parsed || {}),
+      ...(menv.parsed || {}),
+    };
+  }
+
+  return {
+    __BUIDL3_ENV: encode(JSON.stringify(vars)),
+  };
+}
+
 function appify(app) {
+  const env_data = decode(process.env.__BUIDL3_ENV);
+
   const env_dev = require("dotenv").config({ path: app + "/.env" });
-  const env_production = decode(process.env.__BUIDL3_ENV || "")[app] || {};
+  const nenv_dev = require("dotenv").config({ path: "networks/.env" });
+
+  const env_production = env_data?.["modules:" + app];
+
+  const nenv_production = env_data?.["networks"];
 
   const script = glob.sync(app + "/index*")[0];
   if (!script) {
@@ -54,8 +69,14 @@ function appify(app) {
     name: app,
     script,
     autorestart: false,
-    env: env_dev.parsed || {},
-    env_production,
+    env: {
+      ...(env_dev.parsed || {}),
+      __BUIDL3_NETWORK: encode(JSON.stringify(nenv_dev.parsed || {})),
+    },
+    env_production: {
+      ...(env_production || {}),
+      __BUIDL3_NETWORK: encode(JSON.stringify(nenv_production || {})),
+    },
   };
 }
 
