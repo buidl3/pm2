@@ -1,6 +1,6 @@
 {
   "name": "@buidl3/pm2",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "buidl3 pm2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
